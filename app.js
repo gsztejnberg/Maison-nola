@@ -1,7 +1,7 @@
 // ── CONFIGURATION ──
 // Remplacez cette valeur par l'URL de votre Google Apps Script déployé
 const CONFIG = {
-  SHEETS_URL: 'https://script.google.com/macros/s/AKfycbwnRDJCiVa5y_i2AjDOxmjAl9DMtTitSjPWIOnbvR-OYiKm_ept24UwBE6GJBU93e0Bdg/exec', // Ex: 'https://script.google.com/macros/s/XXXXX/exec'
+  SHEETS_URL: 'https://script.google.com/macros/s/AKfycbyJSDSU9oyUbK00eAN155tAbeuEQQ5PcBpI_2BdXmxJgZvL1cxjtyfbUF8QAM6IVj3rZQ/exec',
 };
 
 // ── PWA INITIALIZATION ──
