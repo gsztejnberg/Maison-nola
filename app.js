@@ -398,8 +398,8 @@ function renderDashboard() {
 
 // ── RENDER: PIPELINE (STATUT DES DEMANDES) ──
 
-const URGENCE_JOURS_URGENT      = 15;
-const URGENCE_JOURS_PRIORITAIRE = 45;
+const URGENCE_JOURS_URGENT      = 5;
+const URGENCE_JOURS_PRIORITAIRE = 10;
 const URGENCE_SEUIL_CA          = 500;
 
 const PIPELINE_COLS = [
