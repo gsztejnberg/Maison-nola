@@ -398,10 +398,15 @@ function renderDashboard() {
 
 // ── RENDER: PIPELINE (STATUT DES DEMANDES) ──
 
+const URGENCE_JOURS_URGENT      = 15;
+const URGENCE_JOURS_PRIORITAIRE = 45;
+const URGENCE_SEUIL_CA          = 500;
+
 const PIPELINE_COLS = [
-  { label: 'Prioritaire', id: 'prioritaire', urgence: 'Prioritaire' },
-  { label: 'En cours',    id: 'en_cours',    urgence: 'En cours'    },
-  { label: 'À planifier', id: 'a_planifier', urgence: 'À planifier' },
+  { label: 'Urgent',      id: 'urgent'      },
+  { label: 'Prioritaire', id: 'prioritaire' },
+  { label: 'Important',   id: 'important'   },
+  { label: 'Normal',      id: 'normal'      },
 ];
 
 const ALL_STATUSES = ['Nouveau', 'Contacté', 'Devis envoyé', 'Signé', 'Prestation en cours', 'Terminé', 'Perdu'];
@@ -415,16 +420,27 @@ function renderPipeline() {
     return;
   }
 
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
   const PIPELINE_SCOPE = ['Nouveau', 'Contacté', 'Devis envoyé'];
-  const colsData = { 'prioritaire': [], 'en_cours': [], 'a_planifier': [] };
+  const colsData = { 'urgent': [], 'prioritaire': [], 'important': [], 'normal': [] };
 
   appData.forEach(e => {
     if (!PIPELINE_SCOPE.includes(e['Statut traitement'])) return;
     if (isEventPast(e)) return;
-    const u = e['Urgence'] || '';
-    if (u === 'Prioritaire')   colsData['prioritaire'].push(e);
-    else if (u === 'En cours') colsData['en_cours'].push(e);
-    else                       colsData['a_planifier'].push(e);
+
+    if (!e['Date de l\'événement']) { colsData['normal'].push(e); return; }
+    const d = new Date(String(e['Date de l\'événement']).split('T')[0]);
+    if (isNaN(d.getTime())) { colsData['normal'].push(e); return; }
+
+    const diffDays = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const budget   = parseFloat(e['Budget estimé (€)']) || 0;
+
+    if (diffDays <= URGENCE_JOURS_URGENT)           colsData['urgent'].push(e);
+    else if (diffDays <= URGENCE_JOURS_PRIORITAIRE) colsData['prioritaire'].push(e);
+    else if (budget >= URGENCE_SEUIL_CA)            colsData['important'].push(e);
+    else                                            colsData['normal'].push(e);
   });
 
   el.innerHTML = PIPELINE_COLS.map(col => {
