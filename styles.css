@@ -1,18 +1,18 @@
 :root {
-  --cream:     #FAF6F0;
-  --warm:      #F2EAD8;
-  --parchment: #E8D9BE;
-  --border:    #D4C4A0;
-  --brown:     #7A5C3A;
-  --brown-dk:  #5C3D1E;
+  --cream:     #FAF8F2;
+  --warm:      #F5EDDA;
+  --parchment: #EDE2C8;
+  --border:    #D9CC9E;
+  --brown:     #6B4820;
+  --brown-dk:  #0E0B05;
   --terracotta:#C4714A;
-  --gold:      #B8892A;
-  --gold-lt:   #D4A847;
-  --green:     #4A6741;
+  --gold:      #B89010;
+  --gold-lt:   #DEB025;
+  --green:     #2E5940;
   --red-soft:  #C0453A;
-  --text:      #2E2018;
-  --muted:     #8A7260;
-  --faint:     #BBA88A;
+  --text:      #1C1006;
+  --muted:     #8A7240;
+  --faint:     #BBA870;
 }
 
 * {
@@ -366,26 +366,36 @@ body {
 }
 
 .sidebar-logo {
-  padding: 28px 22px 22px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  padding: 28px 22px 20px;
+  border-bottom: 1px solid rgba(222,176,37,.15);
+  text-align: center;
 }
 
 .logo-name {
   font-family: 'Playfair Display', serif;
-  font-size: 17px;
-  font-weight: 500;
-  font-style: italic;
+  font-size: 15px;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: .10em;
+  text-transform: uppercase;
   color: var(--gold-lt);
   line-height: 1.2;
-  margin-bottom: 3px;
+  margin-bottom: 5px;
+}
+
+.logo-emblem {
+  font-size: 22px;
+  margin-bottom: 8px;
+  display: block;
+  opacity: .85;
 }
 
 .logo-sub {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 400;
-  letter-spacing: .22em;
+  letter-spacing: .20em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.3);
+  color: rgba(255,255,255,.32);
 }
 
 .sidebar-section {
@@ -426,7 +436,7 @@ body {
 
 .nav-item.active {
   color: var(--gold-lt);
-  background: rgba(184,137,42,.12);
+  background: rgba(222,176,37,.12);
   border-left-color: var(--gold-lt);
 }
 
@@ -797,8 +807,8 @@ body {
   white-space: nowrap;
 }
 
-.pill-green { background: rgba(74,103,65,.12); color: var(--green); }
-.pill-gold { background: rgba(184,137,42,.12); color: var(--gold); }
+.pill-green { background: rgba(46,89,64,.12); color: var(--green); }
+.pill-gold { background: rgba(222,176,37,.15); color: var(--gold); }
 .pill-terra { background: rgba(196,113,74,.12); color: var(--terracotta); }
 .pill-gray { background: rgba(138,114,96,.1); color: var(--muted); }
 .pill-red { background: rgba(192,69,58,.1); color: var(--red-soft); }
@@ -1434,14 +1444,14 @@ body {
   justify-content: center;
   width: 50px;
   height: 50px;
-  background: #5C3D1E;
+  background: var(--gold-lt);
   border-radius: 50%;
   border: none;
   cursor: pointer;
-  color: #fff;
+  color: #0E0B05;
   font-size: 26px;
   font-weight: 300;
-  box-shadow: 0 3px 10px rgba(92,61,30,.4);
+  box-shadow: 0 3px 10px rgba(222,176,37,.4);
   margin-bottom: 12px;
   flex-shrink: 0;
   transition: transform .15s;
