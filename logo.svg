@@ -1,15 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <!-- Arrière-plan foncé (marron traiteur) -->
-  <rect width="512" height="512" rx="100" fill="#2E2018"/>
-  <rect x="25" y="25" width="462" height="462" rx="80" fill="none" stroke="#5C3D1E" stroke-width="12"/>
-  
-  <!-- Texte Chez Papi -->
-  <text x="256" y="280" font-family="Playfair Display, Georgia, serif" font-size="220" fill="#EAD9C4" text-anchor="middle" font-weight="bold">CP</text>
-  
-  <!-- Sous-titre -->
-  <text x="256" y="380" font-family="Lato, Arial, sans-serif" font-size="45" fill="#EAD9C4" text-anchor="middle" font-weight="300" letter-spacing="4">TRAITEUR</text>
-  
-  <!-- Élément décoratif -->
-  <path d="M 156 430 L 356 430" stroke="#5C3D1E" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="256" cy="430" r="10" fill="#EAD9C4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fond noir circulaire -->
+  <circle cx="256" cy="256" r="256" fill="#0D0A04"/>
+
+  <!-- Anneau doré épais externe -->
+  <circle cx="256" cy="256" r="243" fill="none" stroke="#C4A265" stroke-width="10"/>
+  <!-- Anneau doré fin interne -->
+  <circle cx="256" cy="256" r="223" fill="none" stroke="#C4A265" stroke-width="2.5"/>
+
+  <!-- ── Chemins pour texte circulaire ── -->
+  <!-- Haut : "MAISON NOLA" — sens horaire (sweep=1) : gauche → HAUT → droite -->
+  <path id="top-arc" d="M 49 256 A 207 207 0 0 1 463 256" fill="none"/>
+  <!-- Bas : "FROMAGERIE" — sens anti-horaire (sweep=0) : gauche → BAS → droite -->
+  <path id="bot-arc" d="M 66 256 A 190 190 0 0 0 446 256" fill="none"/>
+
+  <!-- ── Icône fromage ── -->
+  <!-- Disque principal (roue de fromage avec encoche triangulaire vers le haut-droite) -->
+  <!-- Centre (256,274), rayon 90. Encoche de 279° à 351° (72° de large). -->
+  <!-- Arc de 351° vers 279° dans le sens horaire = 288° → grand arc sweep=1 -->
+  <!-- Point à 351° : (256+90·cos(-9°), 274+90·sin(-9°)) ≈ (345, 260) -->
+  <!-- Point à 279° : (256+90·cos(-81°), 274+90·sin(-81°)) ≈ (270, 185) -->
+  <path d="M 256 274 L 345 260 A 90 90 0 1 1 270 185 Z" fill="#C4A265"/>
+
+  <!-- Tranche séparée (triangle décalé vers le haut-droite de 13px) -->
+  <!-- Sommets originaux : centre (256,274), (345,260), (270,185) + offset (+10,-10) -->
+  <path d="M 266 264 L 355 250 L 280 175 Z" fill="#C4A265"/>
+
+  <!-- ── Texte haut : MAISON NOLA ── -->
+  <text font-family="Arial Black, Arial, sans-serif" font-size="33"
+        font-weight="900" letter-spacing="5" fill="#FFFFFF">
+    <textPath href="#top-arc" startOffset="50%" text-anchor="middle">MAISON NOLA</textPath>
+  </text>
+
+  <!-- ── Texte bas : FROMAGERIE ── -->
+  <text font-family="Arial Black, Arial, sans-serif" font-size="30"
+        font-weight="900" letter-spacing="6" fill="#FFFFFF">
+    <textPath href="#bot-arc" startOffset="50%" text-anchor="middle">FROMAGERIE</textPath>
+  </text>
 </svg>
