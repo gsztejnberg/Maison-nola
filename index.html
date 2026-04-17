@@ -148,7 +148,7 @@
 <span class="nav-icon">📋</span> Demandes
 </button>
 <button class="nav-item" onclick="showPanel('clients',this)" data-panel="clients">
-<span class="nav-icon">✅</span> Prestations en cours
+<span class="nav-icon">✅</span> Commandes en cours
 </button>
 <button class="nav-item" onclick="showPanel('agenda',this)" data-panel="agenda">
 <span class="nav-icon">📅</span> Agenda
@@ -191,7 +191,7 @@ Maison Nola · Grans 13450<br>Tableau de bord
 <h2>Accueil</h2>
 <span class="shd-sub" id="accueil-sub"></span>
 <div style="display:flex; gap:10px;">
-<button class="btn-new" onclick="openEventModal()">+ Nouvel événement</button>
+<button class="btn-new" onclick="openEventModal()">+ Nouvelle commande</button>
 <button class="btn-refresh" onclick="loadData()" title="Actualiser">↻</button>
 </div>
 </div>
@@ -202,7 +202,7 @@ Maison Nola · Grans 13450<br>Tableau de bord
 <div class="kpi-val" id="kpi-ca-val">—</div>
 </div>
 <div class="kpi-card green" onclick="showKpiModal('confirmes')" style="cursor:pointer">
-<div class="kpi-label">Événements confirmés</div>
+<div class="kpi-label">Commandes confirmées</div>
 <div class="kpi-val" id="kpi-confirmes-val">—</div>
 </div>
 <div class="kpi-card" onclick="showKpiModal('devis')" style="cursor:pointer">
@@ -261,7 +261,7 @@ Maison Nola · Grans 13450<br>Tableau de bord
 
 <!-- Prestations en cours -->
 <div class="card">
-<div class="card-title">Prestations en cours <span class="card-title-action" onclick="showPanel('clients',document.querySelector('[data-panel=clients]'))">Plus</span></div>
+<div class="card-title">Commandes en cours <span class="card-title-action" onclick="showPanel('clients',document.querySelector('[data-panel=clients]'))">Plus</span></div>
 <div class="tbl-wrap" id="recent-activity">
 <div class="act-time" style="padding:12px 0;color:var(--muted);">Chargement…</div>
 </div>
@@ -275,7 +275,7 @@ Maison Nola · Grans 13450<br>Tableau de bord
 <div class="section-hd">
 <h2>Demandes</h2>
 <span class="shd-sub" id="devis-sub"></span>
-<button class="btn-new" onclick="openEventModal()">+ Nouvel événement</button>
+<button class="btn-new" onclick="openEventModal()">+ Nouvelle commande</button>
 </div>
 <div class="pipeline" id="pipeline"></div>
 </div>
@@ -284,7 +284,7 @@ Maison Nola · Grans 13450<br>Tableau de bord
 <!-- ══════════════════════ CLIENTS ══════════════════════ -->
 <div class="panel" id="panel-clients">
 <div class="section-hd">
-<h2>Prestations en cours</h2>
+<h2>Commandes en cours</h2>
 <span class="shd-sub" id="clients-sub">Chargement…</span>
 </div>
 <div id="clients-cards">
@@ -469,12 +469,12 @@ Maison Nola · Grans 13450<br>Tableau de bord
     <span class="bn-icon">📋</span>
     <span class="bn-label">Demandes</span>
   </button>
-  <button class="bn-add" onclick="openEventModal()" aria-label="Nouvel événement">
+  <button class="bn-add" onclick="openEventModal()" aria-label="Nouvelle commande">
     <span>+</span>
   </button>
   <button class="bn-item" id="bn-clients" onclick="showPanel('clients',this)">
     <span class="bn-icon">✅</span>
-    <span class="bn-label">Prestations</span>
+    <span class="bn-label">Commandes</span>
   </button>
   <button class="bn-item" id="bn-agenda" onclick="showPanel('agenda',this)">
     <span class="bn-icon">📅</span>

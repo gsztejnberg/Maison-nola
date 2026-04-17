@@ -380,7 +380,7 @@ function renderDashboard() {
   const actEl = document.getElementById('recent-activity');
   if (actEl) {
     if (!prestationsHome.length) {
-      actEl.innerHTML = '<div class="act-time" style="padding:12px 0;color:var(--muted);">Aucune prestation en cours</div>';
+      actEl.innerHTML = '<div class="act-time" style="padding:12px 0;color:var(--muted);">Aucune commande en cours</div>';
     } else {
       const thead = '<table class="tbl tbl-sm"><thead><tr><th style="width:22%">Date</th><th style="width:36%">Client</th><th style="width:20%">€</th><th style="width:22%">Statut</th></tr></thead><tbody>';
       actEl.innerHTML = thead + prestationsHome.map(e => {
@@ -526,10 +526,10 @@ function renderClients() {
     .filter(e => (e['Statut traitement'] === 'Signé' || e['Statut traitement'] === 'Prestation en cours') && !isEventPast(e))
     .sort((a, b) => (a['Date de l\'événement'] || '').localeCompare(b['Date de l\'événement'] || ''));
 
-  if (sub) sub.textContent = `${prestations.length} prestation${prestations.length > 1 ? 's' : ''} en cours`;
+  if (sub) sub.textContent = `${prestations.length} commande${prestations.length > 1 ? 's' : ''} en cours`;
 
   if (!prestations.length) {
-    container.innerHTML = '<div class="tbl-empty" style="padding:20px;">Aucune prestation en cours</div>';
+    container.innerHTML = '<div class="tbl-empty" style="padding:20px;">Aucune commande en cours</div>';
     return;
   }
 
@@ -656,10 +656,10 @@ function renderHistorique() {
   if (!tbody) return;
 
   const pastEvents = getFilteredHistorique();
-  if (sub) sub.textContent = `${pastEvents.length} événement${pastEvents.length > 1 ? 's' : ''}`;
+  if (sub) sub.textContent = `${pastEvents.length} commande${pastEvents.length > 1 ? 's' : ''}`;
 
   if (!pastEvents.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="tbl-empty">Aucun événement passé</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="tbl-empty">Aucune commande passée</td></tr>';
     return;
   }
 
@@ -764,7 +764,7 @@ function openEventModal(rowIndex = null, forceEdit = false) {
   editingRow = rowIndex;
 
   const modal = document.getElementById('event-modal');
-  document.getElementById('modal-title').textContent = rowIndex ? "Modifier l'événement" : 'Nouvel événement';
+  document.getElementById('modal-title').textContent = rowIndex ? "Modifier la commande" : 'Nouvelle commande';
 
   const form = document.getElementById('event-form');
   form.reset();
@@ -858,14 +858,14 @@ document.getElementById('event-form').addEventListener('submit', async e => {
         if (row) Object.assign(row, data);
         renderAll();
         closeEventModal();
-        showNotification('Événement mis à jour', 'success');
+        showNotification('Commande mise à jour', 'success');
       }
     } else {
       result = await SheetsAPI.add(data);
       if (result.success) {
         await loadData();
         closeEventModal();
-        showNotification('Événement ajouté', 'success');
+        showNotification('Commande ajoutée', 'success');
         return;
       }
     }
@@ -879,7 +879,7 @@ document.getElementById('event-form').addEventListener('submit', async e => {
 
 async function deleteCurrentEvent() {
   if (!editingRow) return;
-  if (!confirm("Voulez-vous vraiment supprimer cet événement ? Cette action est irréversible.")) return;
+  if (!confirm("Voulez-vous vraiment supprimer cette commande ? Cette action est irréversible.")) return;
 
   const btnDel = document.getElementById('btn-delete-view-modal') || document.getElementById('btn-delete-event');
   if (btnDel) {
@@ -894,7 +894,7 @@ async function deleteCurrentEvent() {
       renderAll();
       if (typeof closeEventModal === 'function') closeEventModal();
       if (typeof closeViewModal === 'function') closeViewModal();
-      showNotification('Événement supprimé', 'success');
+      showNotification('Commande supprimée', 'success');
     } else {
       showNotification('Erreur : ' + (result.error || 'inconnue'), 'error');
     }
@@ -1219,7 +1219,7 @@ function showKpiModal(type) {
     if(rows.length) tfoot.innerHTML = `<tr><td><strong>TOTAL</strong></td><td><strong>${formatEuro(total)}</strong></td></tr>`;
   } 
   else if (type === 'confirmes') {
-    title.textContent = 'Événements confirmés';
+    title.textContent = 'Commandes confirmées';
     const evts = actives.filter(e => e['Statut traitement'] === 'Signé');
     evts.sort((a,b) => new Date(String(a['Date de l\'événement']||'').split('T')[0]).getTime() - new Date(String(b['Date de l\'événement']||'').split('T')[0]).getTime());
     
@@ -1227,7 +1227,7 @@ function showKpiModal(type) {
     tbody.innerHTML = evts.length ? evts.map(e => {
       const budget = parseFloat(e['Budget estimé (€)']);
       return `<tr style="cursor:pointer" onclick="document.getElementById('kpi-modal').style.display='none'; openEventModal(${e._row})"><td>${formatDateFR(e['Date de l\'événement'])}</td><td><strong>${e['Nom client']}</strong></td><td>${e['Type de commande'] || '—'}</td><td>${budget ? formatEuro(budget) : '—'}</td></tr>`;
-    }).join('') : '<tr><td colspan="4" class="tbl-empty">Aucun événement signé</td></tr>';
+    }).join('') : '<tr><td colspan="4" class="tbl-empty">Aucune commande confirmée</td></tr>';
   }
   else if (type === 'devis') {
     title.textContent = 'Devis en attente';
