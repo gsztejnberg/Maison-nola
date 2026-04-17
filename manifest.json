@@ -1,11 +1,11 @@
 {
-  "name": "Chez Papi",
-  "short_name": "Chez Papi",
-  "description": "Maison Gourmande · Traiteur",
+  "name": "Maison Nola",
+  "short_name": "Maison Nola",
+  "description": "Fromagerie · Crèmerie · Épicerie Fine",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#5C3D1E",
+  "background_color": "#0D0A04",
+  "theme_color": "#0E0B05",
   "icons": [
     {
       "src": "logo.svg",
