@@ -138,7 +138,7 @@ setInterval(updateSyncIndicator, 60000);
 
 // ── NOTIFICATIONS PUSH ──
 
-const SEEN_EVENTS_KEY = 'chez_papi_seen_events';
+const SEEN_EVENTS_KEY = 'maison_nola_seen_events';
 let notifPermissionRequested = false;
 
 function requestNotifPermission() {
@@ -1135,7 +1135,7 @@ function exportHistoriqueCSV() {
   const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
-  a.download = `chez-papi-historique-${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `maison-nola-historique-${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
 }
 
@@ -1802,7 +1802,7 @@ setInterval(loadData, 5 * 60 * 1000); // actualisation automatique toutes les 5 
 
 // ── EXPORT ──
 
-window.ChezPapi = {
+window.MaisonNola = {
   SheetsAPI, showPanel, toggleSidebar, showNotification, loadData, openEventModal, showViewModal, closeViewModal, deleteCurrentEvent, showKpiModal,
   renderHistorique, setHistoriqueFilter, applyHistoriqueDateRange, exportHistoriqueCSV, updateCcStatus,
   renderAgenda, agendaPrevMonth, agendaNextMonth, agendaGoToday,
@@ -1820,4 +1820,4 @@ window.ChezPapi = {
     } catch (e) { console.error('Erreur réseau :', e); }
   },
 };
-console.log('Chez Papi PWA initialized \u2713');
+console.log('Maison Nola PWA initialized \u2713');

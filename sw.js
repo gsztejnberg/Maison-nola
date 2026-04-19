@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chez-papi-v1.52';
+const CACHE_NAME = 'maison-nola-v1.53';
 const ASSETS = [
   './',
   './index.html',
@@ -31,7 +31,7 @@ self.addEventListener('message', e => {
       body: e.data.body,
       icon: './icon-192x192.png',
       badge: './icon-192x192.png',
-      tag: e.data.tag || 'chez-papi'
+      tag: e.data.tag || 'maison-nola'
     }).catch(() => {});
   }
 });

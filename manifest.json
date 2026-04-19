@@ -1,11 +1,11 @@
 {
-  "name": "Chez Papi",
-  "short_name": "Chez Papi",
+  "name": "Maison Nola",
+  "short_name": "Maison Nola",
   "description": "Maison Gourmande · Traiteur",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#5C3D1E",
+  "theme_color": "#2A3A1A",
   "icons": [
     {
       "src": "logo.svg",

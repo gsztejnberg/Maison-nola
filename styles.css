@@ -3,16 +3,16 @@
   --warm:      #F2EAD8;
   --parchment: #E8D9BE;
   --border:    #D4C4A0;
-  --brown:     #7A5C3A;
-  --brown-dk:  #5C3D1E;
-  --terracotta:#C4714A;
+  --brown:     #3D5229;
+  --brown-dk:  #2A3A1A;
+  --terracotta:#C4A055;
   --gold:      #B8892A;
   --gold-lt:   #D4A847;
-  --green:     #4A6741;
+  --green:     #3E6B2E;
   --red-soft:  #C0453A;
-  --text:      #2E2018;
-  --muted:     #8A7260;
-  --faint:     #BBA88A;
+  --text:      #1E2410;
+  --muted:     #6A7A58;
+  --faint:     #9AAA88;
 }
 
 * {
