@@ -153,7 +153,7 @@ function checkNewEvents(rows) {
   const newLeads = rows.filter(r => r['Statut traitement'] === 'Nouveau' && !seen.has(String(r._row)));
   newLeads.forEach(r => {
     const budget = parseFloat(r['Budget estimé (€)']) || 0;
-    const body = `${r['Nom client']} · ${r['Type d\'événement'] || ''}${budget ? ' · ' + formatEuro(budget) : ''}`;
+    const body = `${r['Nom client']} · ${r['Type de commande'] || r['Type d\'événement'] || ''}${budget ? ' · ' + formatEuro(budget) : ''}`;
     const tag = 'lead-' + r._row;
     if (navigator.serviceWorker?.controller) {
       navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title: 'Nouvelle demande', body, tag });
@@ -211,6 +211,55 @@ const SheetsAPI = {
 // ── APP DATA ──
 
 let appData = [];
+let appMode = 'events'; // 'events' | 'cc'
+
+function toggleAppMode() {
+  const toggle = document.getElementById('mode-toggle');
+  appMode = toggle.checked ? 'cc' : 'events';
+  updateModeUI();
+  renderAll();
+}
+
+function updateModeUI() {
+  const isCC = appMode === 'cc';
+
+  const evHdr = document.getElementById('events-header-btns');
+  const ccHdr = document.getElementById('cc-header-btns');
+  if (evHdr) evHdr.style.display = isCC ? 'none' : 'flex';
+  if (ccHdr) ccHdr.style.display = isCC ? 'flex' : 'none';
+
+  document.querySelectorAll('.events-kpi').forEach(el => el.style.display = isCC ? 'none' : '');
+  document.querySelectorAll('.cc-kpi').forEach(el => el.style.display = isCC ? '' : 'none');
+
+  document.querySelectorAll('.events-section').forEach(el => el.style.display = isCC ? 'none' : '');
+  document.querySelectorAll('.cc-section').forEach(el => el.style.display = isCC ? '' : 'none');
+
+  document.querySelectorAll('.events-nav').forEach(el => el.style.display = isCC ? 'none' : '');
+  document.querySelectorAll('.cc-nav').forEach(el => el.style.display = isCC ? '' : 'none');
+
+  document.querySelectorAll('.events-bn').forEach(el => el.style.display = isCC ? 'none' : '');
+  document.querySelectorAll('.cc-bn').forEach(el => el.style.display = isCC ? '' : 'none');
+
+  const lbEv = document.getElementById('mode-label-events');
+  const lbCc = document.getElementById('mode-label-cc');
+  if (lbEv) lbEv.classList.toggle('active', !isCC);
+  if (lbCc) lbCc.classList.toggle('active', isCC);
+
+  const histFilters = document.getElementById('hist-filters-events');
+  const histEvCard  = document.getElementById('historique-events-card');
+  const histCcCard  = document.getElementById('historique-cc-card');
+  if (histFilters) histFilters.style.display = isCC ? 'none' : '';
+  if (histEvCard)  histEvCard.style.display  = isCC ? 'none' : '';
+  if (histCcCard)  histCcCard.style.display  = isCC ? '' : 'none';
+
+  // Si on est sur un panel events-only en mode CC, revenir à accueil
+  if (isCC) {
+    const activePanel = document.querySelector('.panel.active');
+    if (activePanel && ['panel-devis','panel-clients','panel-agenda'].includes(activePanel.id)) {
+      showPanel('accueil', document.querySelector('[data-panel="accueil"]'));
+    }
+  }
+}
 
 function isEventPast(e) {
   if (!e['Date de l\'événement']) return false;
@@ -268,10 +317,86 @@ function setLoading(on) {
 
 function renderAll() {
   try { renderDashboard(); } catch(e) { console.error('renderDashboard:', e); }
+  try { if (appMode === 'cc') renderCcHome(); } catch(e) { console.error('renderCcHome:', e); }
   try { renderPipeline(); } catch(e) { console.error('renderPipeline:', e); }
   try { renderClients(); } catch(e) { console.error('renderClients:', e); }
   try { renderAgenda(); } catch(e) { console.error('renderAgenda:', e); }
   try { if (typeof renderHistorique === 'function') renderHistorique(); } catch(e) { console.error('renderHistorique:', e); }
+  try { if (appMode === 'cc') { renderAaPreparer(); renderCollecte(); } } catch(e) { console.error('renderCC:', e); }
+}
+
+// ── CC HELPERS ──
+
+function parseCcDate(ds) {
+  if (!ds) return null;
+  const s = String(ds).trim();
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+  return parseLocalDate(ds);
+}
+
+function parseCcDateTime(ds) {
+  if (!ds) return null;
+  const s = String(ds).trim();
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2})h(\d{2})/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]), parseInt(m[4]), parseInt(m[5]));
+  return parseLocalDate(ds);
+}
+
+function formatCcTime(ds) {
+  if (!ds) return '—';
+  const s = String(ds).trim();
+  const m = s.match(/(\d{1,2}h\d{2}\s*[-–]\s*\d{1,2}h\d{2})/);
+  if (m) return m[1].trim();
+  const t = s.match(/(\d{1,2}h\d{2})/);
+  if (t) return t[1];
+  return s;
+}
+
+function isCcOrderToday(e) {
+  const d = parseCcDate(e['Date de l\'événement']);
+  if (!d) return false;
+  const t = new Date();
+  return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
+}
+
+function isCcOrderFuture(e) {
+  const d = parseCcDate(e['Date de l\'événement']);
+  if (!d) return false;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return d.getTime() >= today.getTime();
+}
+
+const CC_PRODUCTS = [
+  { display: 'Sélection du mois',     keys: ['sélection du mois', 'selection du mois'] },
+  { display: 'Plateau de la semaine', keys: ['plateau de la semaine'] },
+  { display: 'Apéro 2 pers',          keys: ['apéro 2', 'apero 2', 'aperо 2'] },
+  { display: 'Table 4/6 pers',        keys: ['4/6', 'table 4/6', 'table 4'] },
+  { display: 'Table 6/8 pers',        keys: ['6/8', 'table 6/8', 'table 6'] },
+];
+
+const CC_CHEESE = [
+  { key: 'mixte',  label: 'Mixte',        keys: ['mixte'] },
+  { key: 'brebis', label: 'Brebis/Chèvre', keys: ['brebis', 'chèvre', 'chevre'] },
+  { key: 'vache',  label: 'Vache',         keys: ['vache'] },
+];
+
+function countCcProducts(orders) {
+  return CC_PRODUCTS.map(prod => {
+    const counts = { mixte: 0, brebis: 0, vache: 0 };
+    orders.forEach(e => {
+      const detail = String(e['Détail produits'] || '').toLowerCase();
+      if (!prod.keys.some(k => detail.includes(k))) return;
+      CC_CHEESE.forEach(ch => {
+        if (ch.keys.some(k => detail.includes(k))) counts[ch.key]++;
+      });
+    });
+    return { display: prod.display, ...counts };
+  });
+}
+
+function sameCcDay(d, ref) {
+  return d && d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth() && d.getDate() === ref.getDate();
 }
 
 // ── RENDER: DASHBOARD ──
@@ -285,16 +410,13 @@ function renderDashboard() {
     const d = new Date(String(e['Date de l\'événement']).split('T')[0]);
     return !isNaN(d.getTime()) && d.getFullYear() === currentYear;
   });
-  const caConf = yearlySigned.reduce((s, e) => s + (parseFloat(e['Budget estimé (€)']) || 0), 0);
 
   const actives = appData.filter(e => !isEventPast(e));
   const confirmes = actives.filter(e => e['Statut traitement'] === 'Signé');
   const devisEnv  = actives.filter(e => e['Statut traitement'] === 'Devis envoyé');
-
-  const nouveaux = actives.filter(e => e['Statut traitement'] === 'Nouveau');
+  const nouveaux  = actives.filter(e => e['Statut traitement'] === 'Nouveau');
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('kpi-ca-val',          formatEuro(caConf));
   set('kpi-confirmes-val',   confirmes.length || '—');
   set('kpi-confirmes-delta', devisEnv.length + ' en cours de devis');
   set('kpi-devis-val',       devisEnv.length || '—');
@@ -396,6 +518,172 @@ function renderDashboard() {
   }
 }
 
+// ── RENDER: CC HOME ──
+
+function renderCcHome() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  const ccEnCours = appData.filter(isCcOrderFuture);
+  const ccJour    = appData.filter(isCcOrderToday);
+  set('kpi-cc-encours-val', ccEnCours.length || '—');
+  set('kpi-cc-jour-val',    ccJour.length    || '—');
+
+  // À préparer aujourd'hui
+  const prodsTbody = document.getElementById('cc-preparer-tbody');
+  if (prodsTbody) {
+    const counts = countCcProducts(ccJour);
+    const hasAny = counts.some(p => p.mixte || p.brebis || p.vache);
+    prodsTbody.innerHTML = hasAny
+      ? counts.map(p => `<tr>
+          <td>${p.display}</td>
+          <td style="text-align:center">${p.mixte  || '—'}</td>
+          <td style="text-align:center">${p.brebis || '—'}</td>
+          <td style="text-align:center">${p.vache  || '—'}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" class="tbl-empty">Aucune commande aujourd\'hui</td></tr>';
+  }
+
+  // Collecte du jour : 5 prochaines >= (now - 1h)
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 3600000);
+  const pickups = ccJour
+    .map(e => ({ ...e, _pt: parseCcDateTime(e['Date de l\'événement']) }))
+    .filter(e => e._pt && e._pt >= oneHourAgo)
+    .sort((a, b) => a._pt - b._pt)
+    .slice(0, 5);
+
+  const collecteTbody = document.getElementById('cc-collecte-tbody');
+  if (collecteTbody) {
+    collecteTbody.innerHTML = pickups.length
+      ? pickups.map(e => `<tr style="cursor:pointer" onclick="openEventModal(${e._row})">
+          <td><strong>${e['Nom client']}</strong></td>
+          <td>${e['Détail produits'] || '—'}</td>
+          <td>${formatCcTime(e['Date de l\'événement'])}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" class="tbl-empty">Aucune collecte prochaine</td></tr>';
+  }
+}
+
+// ── RENDER: À PRÉPARER (CC) ──
+
+function renderAaPreparer() {
+  const synTbody = document.getElementById('preparer-synthese-tbody');
+  const joursEl  = document.getElementById('preparer-jours');
+  const sub      = document.getElementById('preparer-sub');
+  if (!synTbody) return;
+
+  const futureOrders = appData.filter(isCcOrderFuture);
+  if (sub) sub.textContent = `${futureOrders.length} commande${futureOrders.length !== 1 ? 's' : ''} à venir`;
+
+  const allProds = countCcProducts(futureOrders);
+  synTbody.innerHTML = allProds.map(p => {
+    const total = (p.mixte || 0) + (p.brebis || 0) + (p.vache || 0);
+    return `<tr>
+      <td>${p.display}</td>
+      <td style="text-align:center">${p.mixte  || '—'}</td>
+      <td style="text-align:center">${p.brebis || '—'}</td>
+      <td style="text-align:center">${p.vache  || '—'}</td>
+      <td style="text-align:center"><strong>${total || '—'}</strong></td>
+    </tr>`;
+  }).join('');
+
+  // Tableaux par jour (J à J+4)
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let joursHtml = '';
+  for (let i = 0; i < 5; i++) {
+    const day = new Date(today); day.setDate(today.getDate() + i);
+    const dayOrders = appData.filter(e => sameCcDay(parseCcDate(e['Date de l\'événement']), day));
+    if (!dayOrders.length) continue;
+    const label = day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const prods = countCcProducts(dayOrders);
+    const rows  = prods.filter(p => p.mixte || p.brebis || p.vache);
+    joursHtml += `<div class="card" style="margin-bottom:16px;">
+      <div class="card-title">${label.charAt(0).toUpperCase() + label.slice(1)}</div>
+      <div class="tbl-wrap"><table class="tbl tbl-sm cc-preparer-table">
+        <thead><tr>
+          <th style="width:35%">Produit</th>
+          <th style="width:16%;text-align:center">Mixte</th>
+          <th style="width:16%;text-align:center">Brebis/Chèvre</th>
+          <th style="width:16%;text-align:center">Vache</th>
+          <th style="width:17%;text-align:center">Total</th>
+        </tr></thead>
+        <tbody>${rows.map(p => {
+          const total = (p.mixte || 0) + (p.brebis || 0) + (p.vache || 0);
+          return `<tr>
+            <td>${p.display}</td>
+            <td style="text-align:center">${p.mixte  || '—'}</td>
+            <td style="text-align:center">${p.brebis || '—'}</td>
+            <td style="text-align:center">${p.vache  || '—'}</td>
+            <td style="text-align:center"><strong>${total}</strong></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+  if (joursEl) joursEl.innerHTML = joursHtml || '<div class="tbl-empty" style="padding:16px;">Aucune commande dans les 5 prochains jours</div>';
+}
+
+// ── RENDER: COLLECTE (CC) ──
+
+let collecteViewDay = new Date();
+collecteViewDay.setHours(0, 0, 0, 0);
+
+function collectePrevDay() {
+  collecteViewDay = new Date(collecteViewDay);
+  collecteViewDay.setDate(collecteViewDay.getDate() - 1);
+  renderCollecte();
+}
+function collecteNextDay() {
+  collecteViewDay = new Date(collecteViewDay);
+  collecteViewDay.setDate(collecteViewDay.getDate() + 1);
+  renderCollecte();
+}
+
+function renderCollecte() {
+  const listEl   = document.getElementById('collecte-list');
+  const labelEl  = document.getElementById('collecte-day-label');
+  const subEl    = document.getElementById('collecte-sub');
+  if (!listEl) return;
+
+  const dayLabel = collecteViewDay.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+  if (labelEl) labelEl.textContent = dayLabel;
+
+  const dayOrders = appData
+    .filter(e => sameCcDay(parseCcDate(e['Date de l\'événement']), collecteViewDay))
+    .map(e => ({ ...e, _pt: parseCcDateTime(e['Date de l\'événement']) }))
+    .sort((a, b) => {
+      if (!a._pt && !b._pt) return 0;
+      if (!a._pt) return 1;
+      if (!b._pt) return -1;
+      return a._pt - b._pt;
+    });
+
+  if (subEl) subEl.textContent = `${dayOrders.length} collecte${dayOrders.length !== 1 ? 's' : ''}`;
+
+  if (!dayOrders.length) {
+    listEl.innerHTML = '<div class="tbl-empty" style="padding:24px;">Aucune collecte ce jour</div>';
+    return;
+  }
+
+  listEl.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr>
+      <th style="width:25%">Client</th>
+      <th style="width:35%">Détail</th>
+      <th style="width:25%">Heure</th>
+      <th style="width:15%">Statut</th>
+    </tr></thead>
+    <tbody>
+      ${dayOrders.map(e => `<tr style="cursor:pointer" onclick="openEventModal(${e._row})">
+        <td><strong>${e['Nom client']}</strong></td>
+        <td>${e['Détail produits'] || '—'}</td>
+        <td>${formatCcTime(e['Date de l\'événement'])}</td>
+        <td><span class="pill ${STATUS_PILL[e['Statut traitement']] || 'pill-gray'}">${e['Statut traitement'] || '—'}</span></td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
 // ── RENDER: PIPELINE (STATUT DES DEMANDES) ──
 
 const URGENCE_JOURS_URGENT = 15;
@@ -476,7 +764,7 @@ function renderPipeline() {
       return `
       <div class="pipe-card" onclick="openEventModal(${e._row})">
         <div class="pipe-client">${e['Nom client']}</div>
-        <div class="pipe-event">${e['Type d\'événement']} \xb7 ${e['Nb convives']} pers.${e['Date de l\'événement'] ? ' \xb7 ' + formatDateFR(e['Date de l\'événement']) : ''}</div>
+        <div class="pipe-event">${e['Type de commande'] || e['Type d\'événement'] || ''} \xb7 ${e['Nb convives'] || ''} pers.${e['Date de l\'événement'] ? ' \xb7 ' + formatDateFR(e['Date de l\'événement']) : ''}</div>
         ${contactLine ? `<div class="pipe-contact" onclick="event.stopPropagation()">${contactLine}</div>` : ''}
         <div class="pipe-footer" style="padding-top: 8px;">
           <div>
@@ -549,7 +837,7 @@ function renderClients() {
     const contactLine = [contact, email].filter(v => v && v !== '—').join(' · ');
     return `<div class="prestation-card">
       <div class="pc-header" onclick="openEventModal(${e._row})" style="cursor:pointer">
-        <div class="pc-line1"><strong>${e['Nom client']}</strong> · ${e['Type d\'événement'] || '—'} · <em>${formatDateFR(e['Date de l\'événement'])}</em></div>
+        <div class="pc-line1"><strong>${e['Nom client']}</strong> · ${e['Type de commande'] || e['Type d\'événement'] || '—'} · <em>${formatDateFR(e['Date de l\'événement'])}</em></div>
         <div class="pc-line2">${budget ? formatEuro(budget) : '—'} &nbsp;${pill}</div>
         ${contactLine ? `<div class="pc-contact">${contactLine}</div>` : ''}
       </div>
@@ -665,6 +953,76 @@ function renderHistorique() {
   const sub   = document.getElementById('historique-sub');
   if (!tbody) return;
 
+  const currentYear = new Date().getFullYear();
+
+  // CA estimé (affiché en permanence dans l'onglet historique)
+  const caYearEl    = document.getElementById('hist-ca-year');
+  const caValEl     = document.getElementById('hist-ca-val');
+  const caCountEl   = document.getElementById('hist-ca-count');
+  if (caYearEl) caYearEl.textContent = currentYear;
+  if (appMode === 'cc') {
+    // CC : CA sur toutes les commandes de l'année en cours
+    const yearOrders = appData.filter(e => {
+      const d = parseCcDate(e['Date de l\'événement']);
+      return d && d.getFullYear() === currentYear;
+    });
+    const ca = yearOrders.reduce((s, e) => s + (parseFloat(e['Budget estimé (€)']) || 0), 0);
+    if (caValEl)   caValEl.textContent   = formatEuro(ca);
+    if (caCountEl) caCountEl.textContent = `${yearOrders.length} commande${yearOrders.length !== 1 ? 's' : ''} en ${currentYear}`;
+
+    // Table CC : synthèse par semaine
+    const pastOrders = appData
+      .filter(e => {
+        const d = parseCcDate(e['Date de l\'événement']);
+        if (!d) return false;
+        const today = new Date(); today.setHours(0,0,0,0);
+        return d < today;
+      })
+      .sort((a, b) => (parseCcDate(b['Date de l\'événement']) || 0) - (parseCcDate(a['Date de l\'événement']) || 0));
+
+    if (sub) sub.textContent = `${pastOrders.length} commande${pastOrders.length !== 1 ? 's' : ''}`;
+
+    const weeks = {};
+    pastOrders.forEach(e => {
+      const d = parseCcDate(e['Date de l\'événement']);
+      if (!d) return;
+      const dow = (d.getDay() + 6) % 7;
+      const ws  = new Date(d); ws.setDate(d.getDate() - dow); ws.setHours(0,0,0,0);
+      const key = ws.toISOString().split('T')[0];
+      if (!weeks[key]) weeks[key] = { ws, count: 0, ca: 0 };
+      weeks[key].count++;
+      weeks[key].ca += (parseFloat(e['Budget estimé (€)']) || 0);
+    });
+
+    const ccTbody = document.getElementById('historique-cc-tbody');
+    if (ccTbody) {
+      const entries = Object.entries(weeks).sort((a, b) => b[0].localeCompare(a[0]));
+      ccTbody.innerHTML = entries.length
+        ? entries.map(([, { ws, count, ca }]) => {
+            const we = new Date(ws); we.setDate(ws.getDate() + 6);
+            const lbl = `${ws.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – ${we.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
+            return `<tr class="cc-week-row">
+              <td><strong>${lbl}</strong></td>
+              <td style="text-align:center">${count} collecte${count !== 1 ? 's' : ''}</td>
+              <td style="text-align:right">${formatEuro(ca)}</td>
+            </tr>`;
+          }).join('')
+        : '<tr><td colspan="3" class="tbl-empty">Aucune commande passée</td></tr>';
+    }
+    return;
+  }
+
+  // Événements mode : CA des statuts confirmés
+  const CA_STATUTS = ['Signé', 'Prestation en cours', 'Terminé'];
+  const yearlySigned = appData.filter(e => {
+    if (!CA_STATUTS.includes(e['Statut traitement'])) return false;
+    const d = new Date(String(e['Date de l\'événement'] || '').split('T')[0]);
+    return !isNaN(d.getTime()) && d.getFullYear() === currentYear;
+  });
+  const caConf = yearlySigned.reduce((s, e) => s + (parseFloat(e['Budget estimé (€)']) || 0), 0);
+  if (caValEl)   caValEl.textContent   = formatEuro(caConf);
+  if (caCountEl) caCountEl.textContent = `${yearlySigned.length} événement${yearlySigned.length !== 1 ? 's' : ''} confirmés en ${currentYear}`;
+
   const pastEvents = getFilteredHistorique();
   if (sub) sub.textContent = `${pastEvents.length} événement${pastEvents.length > 1 ? 's' : ''}`;
 
@@ -680,7 +1038,7 @@ function renderHistorique() {
     return `<tr style="cursor:pointer" onclick="openEventModal(${e._row})">
       <td><strong>${formatDateFR(e['Date de l\'événement'])}</strong></td>
       <td>${e['Nom client']}</td>
-      <td>${e['Type d\'événement'] || '—'}</td>
+      <td>${e['Type de commande'] || e['Type d\'événement'] || '—'}</td>
       <td>${e['Lieu de la prestation'] || '—'}</td>
       <td>${e['Nb convives'] || '—'}</td>
       <td>${budget ? formatEuro(budget) : '—'}</td>
@@ -700,7 +1058,7 @@ function exportHistoriqueCSV() {
   const lines = [headers.join(';')].concat(rows.map(e => [
     String(e['Date de l\'événement'] || '').split('T')[0],
     e['Nom client'],
-    e['Type d\'événement'] || '',
+    e['Type de commande'] || e['Type d\'événement'] || '',
     e['Lieu de la prestation'] || '',
     e['Nb convives'] || '',
     parseFloat(e['Budget estimé (€)']) || '',
@@ -751,8 +1109,8 @@ function showViewModal(rowIndex) {
   
   set('view-date-evt', formatDateFR(data['Date de l\'événement']));
   set('view-client', data['Nom client']);
-  set('view-type', data['Type d\'événement']);
-  set('view-invites', data['Nb convives']);
+  set('view-type', data['Type de commande'] || data['Type d\'événement']);
+  set('view-detail', data['Détail produits'] || data['Nb convives']);
   set('view-budget', formatEuro(parseFloat(data['Budget estimé (€)']) || 0));
   set('view-statut', STATUS_LABEL[data['Statut traitement']] || data['Statut traitement']);
   const contactEl = document.getElementById('view-contact');
@@ -784,8 +1142,8 @@ function openEventModal(rowIndex = null, forceEdit = false) {
     const data = appData.find(e => e._row === rowIndex);
     if (data) {
       for (const el of form.elements) {
-        if (el.name && data[el.name] !== undefined) {
-          let val = data[el.name];
+        if (el.name && (data[el.name] !== undefined || (el.name === 'Type de commande' && data['Type d\'événement'] !== undefined))) {
+          let val = data[el.name] !== undefined ? data[el.name] : (el.name === 'Type de commande' ? data['Type d\'événement'] : undefined);
           if (el.type === 'date' && val) {
             val = String(val).split('T')[0];
           }
@@ -1045,7 +1403,7 @@ function renderAgenda() {
       return `<tr style="cursor:pointer" onclick="openEventModal(${e._row})">
         <td style="padding-left:16px;"><strong>${formatDateFR(e['Date de l\'événement'])}</strong></td>
         <td>${e['Nom client']}</td>
-        <td>${e['Type d\'événement'] || '\u2014'}</td>
+        <td>${e['Type de commande'] || e['Type d\'événement'] || '\u2014'}</td>
         <td>${budget ? formatEuro(budget) : '\u2014'}</td>
         <td><span class="pill ${STATUS_PILL[e['Statut traitement']] || 'pill-gray'}">${STATUS_LABEL[e['Statut traitement']] || e['Statut traitement']}</span></td>
       </tr>`;
@@ -1237,7 +1595,7 @@ function showKpiModal(type) {
     thead.innerHTML = '<tr><th style="width:22%">Date</th><th style="width:36%">Client</th><th style="width:24%">Type</th><th style="width:18%">Montant</th></tr>';
     tbody.innerHTML = evts.length ? evts.map(e => {
       const budget = parseFloat(e['Budget estimé (€)']);
-      return `<tr style="cursor:pointer" onclick="document.getElementById('kpi-modal').style.display='none'; openEventModal(${e._row})"><td>${formatDateFR(e['Date de l\'événement'])}</td><td><strong>${e['Nom client']}</strong></td><td>${e['Type d\'événement'] || '—'}</td><td>${budget ? formatEuro(budget) : '—'}</td></tr>`;
+      return `<tr style="cursor:pointer" onclick="document.getElementById('kpi-modal').style.display='none'; openEventModal(${e._row})"><td>${formatDateFR(e['Date de l\'événement'])}</td><td><strong>${e['Nom client']}</strong></td><td>${e['Type de commande'] || e['Type d\'événement'] || '—'}</td><td>${budget ? formatEuro(budget) : '—'}</td></tr>`;
     }).join('') : '<tr><td colspan="4" class="tbl-empty">Aucun événement signé</td></tr>';
   }
   else if (type === 'devis') {
