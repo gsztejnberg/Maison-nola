@@ -163,6 +163,15 @@
 </button>
 </div>
 
+<div class="sidebar-mode-toggle">
+  <span class="mode-label active" id="sidebar-mode-label-events">Événements</span>
+  <label class="mode-switch">
+    <input type="checkbox" id="sidebar-mode-toggle" onchange="toggleAppMode('sidebar-mode-toggle')">
+    <span class="mode-slider"></span>
+  </label>
+  <span class="mode-label" id="sidebar-mode-label-cc">C&amp;C</span>
+</div>
+
 <div class="sidebar-footer">
 Tableau de bord · v1.0<br>Avril 2026
 </div>
@@ -296,7 +305,7 @@ Tableau de bord · v1.0<br>Avril 2026
 <!-- ── C&C mode sections ── -->
 <!-- À préparer aujourd'hui -->
 <div class="card cc-section" id="cc-a-preparer-card" style="display:none; margin-bottom:16px;">
-<div class="card-title">À préparer aujourd'hui</div>
+<div class="card-title">À préparer aujourd'hui <span class="card-title-action" onclick="showPanel('a-preparer',document.querySelector('[data-panel=a-preparer]'))">Plus</span></div>
 <div class="tbl-wrap">
 <table class="tbl tbl-sm cc-preparer-table">
 <thead><tr>
@@ -314,7 +323,7 @@ Tableau de bord · v1.0<br>Avril 2026
 
 <!-- 5 prochaines collectes -->
 <div class="card cc-section" id="cc-collecte-card" style="display:none;">
-<div class="card-title">5 prochaines collectes</div>
+<div class="card-title">5 prochaines collectes <span class="card-title-action" onclick="showPanel('collecte',document.querySelector('[data-panel=collecte]'))">Plus</span></div>
 <div class="tbl-wrap">
 <table class="tbl tbl-sm">
 <thead><tr>

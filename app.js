@@ -213,8 +213,8 @@ const SheetsAPI = {
 let appData = [];
 let appMode = 'events'; // 'events' | 'cc'
 
-function toggleAppMode() {
-  const toggle = document.getElementById('mode-toggle');
+function toggleAppMode(source) {
+  const toggle = document.getElementById(source || 'mode-toggle');
   appMode = toggle.checked ? 'cc' : 'events';
   updateModeUI();
   renderAll();
@@ -222,6 +222,10 @@ function toggleAppMode() {
 
 function updateModeUI() {
   const isCC = appMode === 'cc';
+  // Synchronise les deux toggles
+  ['mode-toggle', 'sidebar-mode-toggle'].forEach(id => {
+    const t = document.getElementById(id); if (t) t.checked = isCC;
+  });
 
   const evHdr = document.getElementById('events-header-btns');
   const ccHdr = document.getElementById('cc-header-btns');
@@ -240,10 +244,10 @@ function updateModeUI() {
   document.querySelectorAll('.events-bn').forEach(el => el.style.display = isCC ? 'none' : '');
   document.querySelectorAll('.cc-bn').forEach(el => el.style.display = isCC ? '' : 'none');
 
-  const lbEv = document.getElementById('mode-label-events');
-  const lbCc = document.getElementById('mode-label-cc');
-  if (lbEv) lbEv.classList.toggle('active', !isCC);
-  if (lbCc) lbCc.classList.toggle('active', isCC);
+  [['mode-label-events','sidebar-mode-label-events'], ['mode-label-cc','sidebar-mode-label-cc']].forEach(([a, b], i) => {
+    const active = i === 0 ? !isCC : isCC;
+    [a, b].forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle('active', active); });
+  });
 
   const histFilters = document.getElementById('hist-filters-events');
   const histEvCard  = document.getElementById('historique-events-card');
@@ -330,16 +334,24 @@ function renderAll() {
 function parseCcDate(ds) {
   if (!ds) return null;
   const s = String(ds).trim();
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+  // DD/MM/YYYY
+  const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m1) return new Date(parseInt(m1[3]), parseInt(m1[2]) - 1, parseInt(m1[1]));
+  // YY-MM-DD (ex: 26-04-20)
+  const m2 = s.match(/^(\d{2})-(\d{2})-(\d{2})/);
+  if (m2) return new Date(2000 + parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]));
   return parseLocalDate(ds);
 }
 
 function parseCcDateTime(ds) {
   if (!ds) return null;
   const s = String(ds).trim();
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2})h(\d{2})/);
-  if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]), parseInt(m[4]), parseInt(m[5]));
+  // DD/MM/YYYY HHhMM
+  const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2})h(\d{2})/);
+  if (m1) return new Date(parseInt(m1[3]), parseInt(m1[2]) - 1, parseInt(m1[1]), parseInt(m1[4]), parseInt(m1[5]));
+  // YY-MM-DD HHhMM (ex: 26-04-20 12h00)
+  const m2 = s.match(/^(\d{2})-(\d{2})-(\d{2})\s+(\d{1,2})h(\d{2})/);
+  if (m2) return new Date(2000 + parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]), parseInt(m2[4]), parseInt(m2[5]));
   return parseLocalDate(ds);
 }
 
@@ -611,7 +623,7 @@ function renderAaPreparer() {
         <thead><tr>
           <th style="width:35%">Produit</th>
           <th style="width:16%;text-align:center">Mixte</th>
-          <th style="width:16%;text-align:center">Brebis/Chèvre</th>
+          <th style="width:16%;text-align:center">B/C</th>
           <th style="width:16%;text-align:center">Vache</th>
           <th style="width:17%;text-align:center">Total</th>
         </tr></thead>
@@ -1683,6 +1695,10 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // ── PANEL NAVIGATION ──
 
 function showPanel(panelName, element) {
+  // Réinitialise le jour de collecte à aujourd'hui à chaque retour sur l'onglet
+  if (panelName === 'collecte') {
+    collecteViewDay = new Date(); collecteViewDay.setHours(0, 0, 0, 0);
+  }
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
