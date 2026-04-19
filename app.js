@@ -1668,6 +1668,46 @@ function showKpiModal(type) {
     }).join('') : '<tr><td colspan="4" class="tbl-empty">Aucun nouveau lead</td></tr>';
   }
 
+  else if (type === 'cc-encours') {
+    title.textContent = 'Commandes — 7 jours à venir';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dayRows = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(today); day.setDate(today.getDate() + i);
+      const orders = appData.filter(e => isCcOrder(e) && sameCcDay(parseCcDate(e['Date de l\'événement']), day));
+      const label = i === 0
+        ? 'Aujourd\'hui'
+        : day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
+      dayRows.push({ label: label.charAt(0).toUpperCase() + label.slice(1), count: orders.length });
+    }
+    thead.innerHTML = '<tr><th>Jour</th><th style="text-align:center">Commandes</th></tr>';
+    tbody.innerHTML = dayRows.map(r => `<tr${r.count === 0 ? ' style="color:var(--muted)"' : ''}>
+      <td><strong>${r.label}</strong></td>
+      <td style="text-align:center">${r.count || '—'}</td>
+    </tr>`).join('');
+    const total = dayRows.reduce((s, r) => s + r.count, 0);
+    if (total) tfoot.innerHTML = `<tr><td><strong>Total</strong></td><td style="text-align:center"><strong>${total}</strong></td></tr>`;
+  }
+  else if (type === 'cc-jour') {
+    title.textContent = 'Commandes du jour';
+    const todayOrders = appData.filter(isCcOrderToday);
+    const matin = todayOrders.filter(e => {
+      const pt = parseCcDateTime(e['Date de l\'événement']);
+      return !pt || pt.getHours() < 12;
+    });
+    const apm = todayOrders.filter(e => {
+      const pt = parseCcDateTime(e['Date de l\'événement']);
+      return pt && pt.getHours() >= 12;
+    });
+    const ca = todayOrders.reduce((s, e) => s + (parseFloat(e['Budget estimé (€)']) || 0), 0);
+    thead.innerHTML = '<tr><th>Créneau</th><th style="text-align:center">Commandes</th></tr>';
+    tbody.innerHTML = `
+      <tr><td>Matin (avant 12h)</td><td style="text-align:center"><strong>${matin.length || '—'}</strong></td></tr>
+      <tr><td>Après-midi (12h et +)</td><td style="text-align:center"><strong>${apm.length || '—'}</strong></td></tr>
+    `;
+    if (ca) tfoot.innerHTML = `<tr><td><strong>CA du jour</strong></td><td style="text-align:center"><strong>${formatEuro(ca)}</strong></td></tr>`;
+  }
+
   document.getElementById('kpi-modal').style.display = 'flex';
 }
 
