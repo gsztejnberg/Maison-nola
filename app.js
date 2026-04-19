@@ -1034,13 +1034,13 @@ function renderHistorique() {
     if (caCountEl) caCountEl.textContent = `${yearOrders.length} commande${yearOrders.length !== 1 ? 's' : ''} en ${currentYear}`;
 
     // Table CC : synthèse par semaine
+    const today = new Date(); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
     const pastOrders = appData
       .filter(e => {
         if (!isCcOrder(e)) return false;
         const d = parseCcDate(e['Date de l\'événement']);
-        if (!d) return false;
-        const today = new Date(); today.setHours(0,0,0,0);
-        return d < today;
+        return d && d < tomorrow; // inclut aujourd'hui
       })
       .sort((a, b) => (parseCcDate(b['Date de l\'événement']) || 0) - (parseCcDate(a['Date de l\'événement']) || 0));
 
@@ -1050,9 +1050,10 @@ function renderHistorique() {
     pastOrders.forEach(e => {
       const d = parseCcDate(e['Date de l\'événement']);
       if (!d) return;
-      const dow = (d.getDay() + 6) % 7;
+      const dow = (d.getDay() + 6) % 7; // 0=lundi
       const ws  = new Date(d); ws.setDate(d.getDate() - dow); ws.setHours(0,0,0,0);
-      const key = ws.toISOString().split('T')[0];
+      // clé en heure locale pour éviter le décalage UTC
+      const key = `${ws.getFullYear()}-${String(ws.getMonth()+1).padStart(2,'0')}-${String(ws.getDate()).padStart(2,'0')}`;
       if (!weeks[key]) weeks[key] = { ws, count: 0, ca: 0 };
       weeks[key].count++;
       weeks[key].ca += (parseFloat(e['Budget estimé (€)']) || 0);
