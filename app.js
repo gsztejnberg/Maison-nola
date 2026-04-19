@@ -337,6 +337,9 @@ function parseCcDate(ds) {
   // DD/MM/YYYY
   const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
   if (m1) return new Date(parseInt(m1[3]), parseInt(m1[2]) - 1, parseInt(m1[1]));
+  // YYYY-MM-DD (ISO : on force l'heure locale pour éviter le décalage UTC)
+  const m3 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m3) return new Date(parseInt(m3[1]), parseInt(m3[2]) - 1, parseInt(m3[3]));
   // YY-MM-DD (ex: 26-04-20)
   const m2 = s.match(/^(\d{2})-(\d{2})-(\d{2})/);
   if (m2) return new Date(2000 + parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]));
@@ -349,6 +352,9 @@ function parseCcDateTime(ds) {
   // DD/MM/YYYY HHhMM
   const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2})h(\d{2})/);
   if (m1) return new Date(parseInt(m1[3]), parseInt(m1[2]) - 1, parseInt(m1[1]), parseInt(m1[4]), parseInt(m1[5]));
+  // YYYY-MM-DD HHhMM ou YYYY-MM-DDTHH:MM (ISO avec heure, heure locale)
+  const m3 = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2})[h:](\d{2})/);
+  if (m3) return new Date(parseInt(m3[1]), parseInt(m3[2]) - 1, parseInt(m3[3]), parseInt(m3[4]), parseInt(m3[5]));
   // YY-MM-DD HHhMM (ex: 26-04-20 12h00)
   const m2 = s.match(/^(\d{2})-(\d{2})-(\d{2})\s+(\d{1,2})h(\d{2})/);
   if (m2) return new Date(2000 + parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]), parseInt(m2[4]), parseInt(m2[5]));
@@ -366,7 +372,8 @@ function formatCcTime(ds) {
 }
 
 function isCcOrder(e) {
-  return e['Type de commande'] === 'Click & Collect';
+  const t = String(e['Type de commande'] || '').trim().toLowerCase();
+  return t === 'click & collect' || t === 'click &amp; collect';
 }
 
 function isCcOrderToday(e) {
@@ -592,27 +599,37 @@ function renderAaPreparer() {
   const sub      = document.getElementById('preparer-sub');
   if (!synTbody) return;
 
-  const futureOrders = appData.filter(e => isCcOrder(e) && isCcOrderFuture(e));
-  if (sub) sub.textContent = `${futureOrders.length} commande${futureOrders.length !== 1 ? 's' : ''} à venir`;
-
-  const allProds = countCcProducts(futureOrders);
-  synTbody.innerHTML = allProds.map(p => {
-    const total = (p.mixte || 0) + (p.brebis || 0) + (p.vache || 0);
-    return `<tr>
-      <td>${p.display}</td>
-      <td style="text-align:center">${p.mixte  || '—'}</td>
-      <td style="text-align:center">${p.brebis || '—'}</td>
-      <td style="text-align:center">${p.vache  || '—'}</td>
-      <td style="text-align:center"><strong>${total || '—'}</strong></td>
-    </tr>`;
-  }).join('');
-
-  // Tableaux par jour (J à J+4)
   const today = new Date(); today.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(today); weekEnd.setDate(today.getDate() + 6); weekEnd.setHours(23, 59, 59, 999);
+  const weekOrders = appData.filter(e => {
+    if (!isCcOrder(e)) return false;
+    const d = parseCcDate(e['Date de l\'événement']);
+    return d && d >= today && d <= weekEnd;
+  });
+
+  if (sub) sub.textContent = `${weekOrders.length} commande${weekOrders.length !== 1 ? 's' : ''} cette semaine`;
+
+  const allProds = countCcProducts(weekOrders);
+  const hasAnySyn = allProds.some(p => p.mixte || p.brebis || p.vache);
+  synTbody.innerHTML = hasAnySyn
+    ? allProds.map(p => {
+        const total = (p.mixte || 0) + (p.brebis || 0) + (p.vache || 0);
+        if (!total) return '';
+        return `<tr>
+          <td>${p.display}</td>
+          <td style="text-align:center">${p.mixte  || '—'}</td>
+          <td style="text-align:center">${p.brebis || '—'}</td>
+          <td style="text-align:center">${p.vache  || '—'}</td>
+          <td style="text-align:center"><strong>${total}</strong></td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="5" class="tbl-empty">Aucun plateau cette semaine</td></tr>';
+
+  // Tableaux par jour (J à J+6)
   let joursHtml = '';
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 7; i++) {
     const day = new Date(today); day.setDate(today.getDate() + i);
-    const dayOrders = appData.filter(e => sameCcDay(parseCcDate(e['Date de l\'événement']), day));
+    const dayOrders = appData.filter(e => isCcOrder(e) && sameCcDay(parseCcDate(e['Date de l\'événement']), day));
     if (!dayOrders.length) continue;
     const label = day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     const prods = countCcProducts(dayOrders);
