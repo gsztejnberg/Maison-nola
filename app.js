@@ -1797,6 +1797,7 @@ function showNotification(message, type = 'info', duration = 3000) {
 // ── INIT ──
 
 loadData();
+setInterval(loadData, 5 * 60 * 1000); // actualisation automatique toutes les 5 minutes
 
 // ── EXPORT ──
 
