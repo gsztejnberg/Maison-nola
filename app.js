@@ -95,7 +95,7 @@ function formatDateFR(ds) {
   catch { return String(ds); }
 }
 
-const STATUS_PILL = { 'Signé': 'pill-green', 'Devis envoyé': 'pill-gold', 'Contacté': 'pill-gold', 'Nouveau': 'pill-terra', 'Terminé': 'pill-gray', 'Perdu': 'pill-red', 'Prestation en cours': 'pill-green' };
+const STATUS_PILL = { 'Signé': 'pill-green', 'Devis envoyé': 'pill-gold', 'Contacté': 'pill-gold', 'Nouveau': 'pill-terra', 'Terminé': 'pill-gray', 'Perdu': 'pill-red', 'Prestation en cours': 'pill-green', 'À préparer': 'pill-terra', 'Prêt': 'pill-gold', 'Collecté': 'pill-green' };
 const STATUS_LABEL = { 'Nouveau': '🆕 Nouvelle demande', 'Contacté': '☎️ Client contacté', 'Devis envoyé': '💬 Devis envoyé', 'Signé': '✅ Devis signé', 'Terminé': 'Prestation terminée', 'Perdu': '❌ Client perdu', 'Prestation en cours': '🔄 Prestation en cours' };
 const STATUS_DOT   = { 'Signé': 'green', 'Devis envoyé': '', 'Contacté': '', 'Nouveau': 'terra', 'Terminé': 'gray', 'Perdu': 'red', 'Prestation en cours': 'green' };
 
@@ -353,7 +353,12 @@ function formatCcTime(ds) {
   return s;
 }
 
+function isCcOrder(e) {
+  return e['Type de commande'] === 'Click & Collect';
+}
+
 function isCcOrderToday(e) {
+  if (!isCcOrder(e)) return false;
   const d = parseCcDate(e['Date de l\'événement']);
   if (!d) return false;
   const t = new Date();
@@ -361,6 +366,7 @@ function isCcOrderToday(e) {
 }
 
 function isCcOrderFuture(e) {
+  if (!isCcOrder(e)) return false;
   const d = parseCcDate(e['Date de l\'événement']);
   if (!d) return false;
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -377,7 +383,7 @@ const CC_PRODUCTS = [
 
 const CC_CHEESE = [
   { key: 'mixte',  label: 'Mixte',        keys: ['mixte'] },
-  { key: 'brebis', label: 'Brebis/Chèvre', keys: ['brebis', 'chèvre', 'chevre'] },
+  { key: 'brebis', label: 'B/C',            keys: ['brebis', 'chèvre', 'chevre'] },
   { key: 'vache',  label: 'Vache',         keys: ['vache'] },
 ];
 
@@ -411,7 +417,7 @@ function renderDashboard() {
     return !isNaN(d.getTime()) && d.getFullYear() === currentYear;
   });
 
-  const actives = appData.filter(e => !isEventPast(e));
+  const actives = appData.filter(e => !isEventPast(e) && !isCcOrder(e));
   const confirmes = actives.filter(e => e['Statut traitement'] === 'Signé');
   const devisEnv  = actives.filter(e => e['Statut traitement'] === 'Devis envoyé');
   const nouveaux  = actives.filter(e => e['Statut traitement'] === 'Nouveau');
@@ -428,7 +434,7 @@ function renderDashboard() {
   todayDate.setHours(0,0,0,0);
 
   const newDemandes = appData
-    .filter(e => e['Statut traitement'] === 'Nouveau')
+    .filter(e => e['Statut traitement'] === 'Nouveau' && !isCcOrder(e))
     .sort((a, b) => (b['Date de la demande'] || '').localeCompare(a['Date de la demande'] || ''))
     .slice(0, 6);
 
@@ -544,10 +550,11 @@ function renderCcHome() {
       : '<tr><td colspan="4" class="tbl-empty">Aucune commande aujourd\'hui</td></tr>';
   }
 
-  // Collecte du jour : 5 prochaines >= (now - 1h)
+  // 5 prochaines collectes toutes dates confondues >= maintenant - 1h
   const now = new Date();
   const oneHourAgo = new Date(now.getTime() - 3600000);
-  const pickups = ccJour
+  const pickups = appData
+    .filter(isCcOrder)
     .map(e => ({ ...e, _pt: parseCcDateTime(e['Date de l\'événement']) }))
     .filter(e => e._pt && e._pt >= oneHourAgo)
     .sort((a, b) => a._pt - b._pt)
@@ -573,7 +580,7 @@ function renderAaPreparer() {
   const sub      = document.getElementById('preparer-sub');
   if (!synTbody) return;
 
-  const futureOrders = appData.filter(isCcOrderFuture);
+  const futureOrders = appData.filter(e => isCcOrder(e) && isCcOrderFuture(e));
   if (sub) sub.textContent = `${futureOrders.length} commande${futureOrders.length !== 1 ? 's' : ''} à venir`;
 
   const allProds = countCcProducts(futureOrders);
@@ -650,7 +657,7 @@ function renderCollecte() {
   if (labelEl) labelEl.textContent = dayLabel;
 
   const dayOrders = appData
-    .filter(e => sameCcDay(parseCcDate(e['Date de l\'événement']), collecteViewDay))
+    .filter(e => isCcOrder(e) && sameCcDay(parseCcDate(e['Date de l\'événement']), collecteViewDay))
     .map(e => ({ ...e, _pt: parseCcDateTime(e['Date de l\'événement']) }))
     .sort((a, b) => {
       if (!a._pt && !b._pt) return 0;
@@ -666,22 +673,47 @@ function renderCollecte() {
     return;
   }
 
+  const CC_STATUTS = ['À préparer', 'Prêt', 'Collecté'];
   listEl.innerHTML = `<div class="tbl-wrap"><table class="tbl">
     <thead><tr>
       <th style="width:25%">Client</th>
       <th style="width:35%">Détail</th>
-      <th style="width:25%">Heure</th>
-      <th style="width:15%">Statut</th>
+      <th style="width:20%">Heure</th>
+      <th style="width:20%">Statut</th>
     </tr></thead>
     <tbody>
-      ${dayOrders.map(e => `<tr style="cursor:pointer" onclick="openEventModal(${e._row})">
-        <td><strong>${e['Nom client']}</strong></td>
-        <td>${e['Détail produits'] || '—'}</td>
-        <td>${formatCcTime(e['Date de l\'événement'])}</td>
-        <td><span class="pill ${STATUS_PILL[e['Statut traitement']] || 'pill-gray'}">${e['Statut traitement'] || '—'}</span></td>
-      </tr>`).join('')}
+      ${dayOrders.map(e => {
+        const cur = e['Statut traitement'] || 'À préparer';
+        const opts = CC_STATUTS.map(s => `<option value="${s}"${s === cur ? ' selected' : ''}>${s}</option>`).join('');
+        return `<tr>
+          <td style="cursor:pointer" onclick="openEventModal(${e._row})"><strong>${e['Nom client']}</strong></td>
+          <td>${e['Détail produits'] || '—'}</td>
+          <td>${formatCcTime(e['Date de l\'événement'])}</td>
+          <td><select class="pill ${STATUS_PILL[cur] || 'pill-gray'}" style="border:none;outline:none;cursor:pointer;font-family:inherit;font-size:12px;" onchange="updateCcStatus(this,${e._row})" onclick="event.stopPropagation()">${opts}</select></td>
+        </tr>`;
+      }).join('')}
     </tbody>
   </table></div>`;
+}
+
+async function updateCcStatus(selectEl, rowIndex) {
+  const newStatus = selectEl.value;
+  selectEl.className = `pill ${STATUS_PILL[newStatus] || 'pill-gray'}`;
+  selectEl.disabled = true;
+  try {
+    const result = await SheetsAPI.update(rowIndex, { 'Statut traitement': newStatus });
+    if (result.success) {
+      const row = appData.find(e => e._row === rowIndex);
+      if (row) row['Statut traitement'] = newStatus;
+      showNotification('Statut mis à jour', 'success');
+    } else {
+      showNotification('Erreur : ' + (result.error || 'inconnue'), 'error');
+    }
+  } catch {
+    showNotification('Erreur réseau', 'error');
+  } finally {
+    selectEl.disabled = false;
+  }
 }
 
 // ── RENDER: PIPELINE (STATUT DES DEMANDES) ──
@@ -718,6 +750,7 @@ function renderPipeline() {
   appData.forEach(e => {
     if (!PIPELINE_SCOPE.includes(e['Statut traitement'])) return;
     if (isEventPast(e)) return;
+    if (isCcOrder(e)) return;
 
     if (!e['Date de l\'événement']) { colsData['normal'].push(e); return; }
     const d = new Date(String(e['Date de l\'événement']).split('T')[0]);
@@ -819,7 +852,7 @@ function renderClients() {
   }
 
   const prestations = appData
-    .filter(e => (e['Statut traitement'] === 'Signé' || e['Statut traitement'] === 'Prestation en cours') && !isEventPast(e))
+    .filter(e => (e['Statut traitement'] === 'Signé' || e['Statut traitement'] === 'Prestation en cours') && !isEventPast(e) && !isCcOrder(e))
     .sort((a, b) => (a['Date de l\'événement'] || '').localeCompare(b['Date de l\'événement'] || ''));
 
   if (sub) sub.textContent = `${prestations.length} prestation${prestations.length > 1 ? 's' : ''} en cours`;
@@ -920,7 +953,7 @@ function applyHistoriqueDateRange() {
 
 function getFilteredHistorique() {
   const allPast = appData
-    .filter(e => isEventPast(e))
+    .filter(e => isEventPast(e) && !isCcOrder(e))
     .sort((a, b) => (b['Date de l\'événement'] || '').localeCompare(a['Date de l\'événement'] || ''));
 
   if (historiqueFilter === 'all') return allPast;
@@ -961,8 +994,9 @@ function renderHistorique() {
   const caCountEl   = document.getElementById('hist-ca-count');
   if (caYearEl) caYearEl.textContent = currentYear;
   if (appMode === 'cc') {
-    // CC : CA sur toutes les commandes de l'année en cours
+    // CC : CA sur toutes les commandes C&C de l'année en cours
     const yearOrders = appData.filter(e => {
+      if (!isCcOrder(e)) return false;
       const d = parseCcDate(e['Date de l\'événement']);
       return d && d.getFullYear() === currentYear;
     });
@@ -973,6 +1007,7 @@ function renderHistorique() {
     // Table CC : synthèse par semaine
     const pastOrders = appData
       .filter(e => {
+        if (!isCcOrder(e)) return false;
         const d = parseCcDate(e['Date de l\'événement']);
         if (!d) return false;
         const today = new Date(); today.setHours(0,0,0,0);
@@ -1694,7 +1729,7 @@ loadData();
 
 window.ChezPapi = {
   SheetsAPI, showPanel, toggleSidebar, showNotification, loadData, openEventModal, showViewModal, closeViewModal, deleteCurrentEvent, showKpiModal,
-  renderHistorique, setHistoriqueFilter, applyHistoriqueDateRange, exportHistoriqueCSV,
+  renderHistorique, setHistoriqueFilter, applyHistoriqueDateRange, exportHistoriqueCSV, updateCcStatus,
   renderAgenda, agendaPrevMonth, agendaNextMonth, agendaGoToday,
   toggleAgendaPicker, agendaPickerPrevYear, agendaPickerNextYear, selectAgendaMonth,
   addTodo, toggleTodo, deleteTodo, toggleFormMode, checkDateConflict,
