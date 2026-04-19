@@ -1,7 +1,7 @@
 {
   "name": "Maison Nola",
   "short_name": "Maison Nola",
-  "description": "Maison Gourmande · Traiteur",
+  "description": "Fromagerie",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",

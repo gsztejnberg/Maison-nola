@@ -7,7 +7,7 @@
   <text x="256" y="280" font-family="Playfair Display, Georgia, serif" font-size="220" fill="#EAD9C4" text-anchor="middle" font-weight="bold">MN</text>
 
   <!-- Sous-titre -->
-  <text x="256" y="380" font-family="Lato, Arial, sans-serif" font-size="45" fill="#C4A055" text-anchor="middle" font-weight="300" letter-spacing="4">TRAITEUR</text>
+  <text x="256" y="380" font-family="Lato, Arial, sans-serif" font-size="45" fill="#C4A055" text-anchor="middle" font-weight="300" letter-spacing="4">FROMAGERIE</text>
 
   <!-- Élément décoratif -->
   <path d="M 156 430 L 356 430" stroke="#C4A055" stroke-width="6" stroke-linecap="round"/>
