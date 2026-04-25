@@ -36,6 +36,10 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
       Historique
     </div>
+    <div class="nav-item" data-panel="factures" onclick="showPanel('factures')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Factures pro
+    </div>
   </nav>
   <div class="sidebar-footer" id="sf-date"></div>
 </aside>
@@ -58,6 +62,7 @@
   <div class="panel" id="panel-stocks"></div>
   <div class="panel" id="panel-cc"></div>
   <div class="panel" id="panel-historique"></div>
+  <div class="panel" id="panel-factures"></div>
 </main>
 
 <!-- BOTTOM NAV (mobile) -->
@@ -77,6 +82,10 @@
   <div class="bn-item" data-panel="historique" onclick="showPanel('historique')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
     <span>Historique</span>
+  </div>
+  <div class="bn-item" data-panel="factures" onclick="showPanel('factures')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    <span>Factures</span>
   </div>
 </nav>
 

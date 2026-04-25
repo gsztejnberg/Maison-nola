@@ -108,11 +108,21 @@ const HISTORIQUE = [
   { date:'2026-04-18', heure:'11:05', client:'Thomas Girard',     ref:'C-0402',canal:'Caisse', detail:'Règlement C&C CC011',           montant:92.00,  paiement:'CB',          isCCPayment:true },
 ];
 
+const FACTURES = [
+  { id:'FAC-2026-001', client:'Restaurant Le Bistrot des Halles', contact:'Marc Renaud',    montant:148.00, dateEnvoi:'2026-04-05', statut:'payé',      datePaiement:'2026-04-12', detail:'Sélection du mois ×2 + Table 4/6 pers ×1 (Vache)' },
+  { id:'FAC-2026-002', client:'Hôtel La Maison Dorée',            contact:'Sophie Blanc',   montant:220.00, dateEnvoi:'2026-04-10', statut:'à relancer', datePaiement:null,         detail:'Table 6/8 pers ×2 (Mixte) + Plateau de la semaine ×1' },
+  { id:'FAC-2026-003', client:'Brasserie du Commerce',            contact:'Jean-Luc Petit', montant:92.00,  dateEnvoi:'2026-04-14', statut:'à relancer', datePaiement:null,         detail:'Apéro 2 pers ×4 (B/C) + Sélection du mois ×1' },
+  { id:'FAC-2026-004', client:'Épicerie Fine Dumont',             contact:'Claire Dumont',  montant:67.50,  dateEnvoi:'2026-04-18', statut:'payé',      datePaiement:'2026-04-22', detail:'Plateau de la semaine ×2 + Apéro 2 pers ×1 (Mixte)' },
+  { id:'FAC-2026-005', client:'Restaurant Le Terroir',            contact:'Pierre Garnier', montant:175.00, dateEnvoi:'2026-04-22', statut:'en attente', datePaiement:null,         detail:'Table 6/8 pers ×1 (Vache) + Sélection du mois ×1' },
+  { id:'FAC-2026-006', client:'Cave & Dégustation Moreau',        contact:'Henri Moreau',   montant:340.00, dateEnvoi:'2026-04-25', statut:'en attente', datePaiement:null,         detail:'Commande mensuelle — 8 plateaux assortis (grossiste)' },
+];
+
 // ===== STATE =====
 let currentPanel = 'planning';
 let stockFilter = 'Tous';
 let stockSearch = '';
 let histoFilter = 'semaine';
+let facturesData = FACTURES.map(f => ({ ...f }));
 let stockData = STOCKS.map(s => ({ ...s }));
 let ccOrders = CC_ORDERS.map(o => ({ ...o, statut: { ...o.statut } }));
 
@@ -163,7 +173,7 @@ function showPanel(name) {
   document.getElementById('panel-' + name).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.panel === name));
   document.querySelectorAll('.bn-item').forEach(n => n.classList.toggle('active', n.dataset.panel === name));
-  const titles = { planning:'Planning', stocks:'Gestion des stocks', cc:'Click & Collect', historique:'Historique' };
+  const titles = { planning:'Planning', stocks:'Gestion des stocks', cc:'Click & Collect', historique:'Historique', factures:'Factures pro' };
   document.getElementById('topbar-title').textContent = titles[name];
   renderTopbarActions(name);
   renderPanel(name);
@@ -189,6 +199,11 @@ function renderTopbarActions(panel) {
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Export comptabilité
     </button>`;
+  } else if (panel === 'factures') {
+    el.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openNewFactureModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nouvelle facture
+    </button>`;
   } else {
     el.innerHTML = '';
   }
@@ -201,7 +216,7 @@ function toggleSidebar() {
 
 // ===== RENDER PANEL DISPATCH =====
 function renderPanel(name) {
-  const map = { planning: renderPlanning, stocks: renderStocks, cc: renderCC, historique: renderHistorique };
+  const map = { planning: renderPlanning, stocks: renderStocks, cc: renderCC, historique: renderHistorique, factures: renderFactures };
   if (map[name]) map[name]();
 }
 
@@ -623,24 +638,42 @@ function renderHistorique() {
     return rows;
   }
 
-  // Exclude C&C orders that were paid at the cash register (isCCPayment:true)
-  // and flag C&C orders marked paieCaisse so we know their total is in caisse
+  // Exclude C&C orders paid at cash register (isCCPayment:true)
   const canalRows = HISTORIQUE.filter(r => !r.isCCPayment);
   const filtered = filterByPeriod(canalRows);
 
-  const caTotal = filtered.filter(r => r.canal === 'Caisse').reduce((a, r) => a + r.montant, 0);
-  const ccTotal = filtered.filter(r => r.canal === 'C&C' && !r.paieCaisse).reduce((a, r) => a + r.montant, 0);
-  const total = caTotal + ccTotal;
-  const nb = filtered.length;
+  // Factures pro payées dans la période
+  const facturesPeriode = filterByPeriod(
+    facturesData.filter(f => f.statut === 'payé').map(f => ({ ...f, date: f.datePaiement, heure: '—', canal: 'Facture pro' }))
+  );
 
-  const tableRows = filtered.map(r => {
-    const canalClass = r.canal === 'Caisse' ? 'canal-caisse' : r.paieCaisse ? 'canal-both' : 'canal-cc';
-    const canalLabel = r.canal === 'Caisse' ? 'Caisse' : r.paieCaisse ? 'C&C (payé caisse)' : 'C&C en ligne';
+  const caTotal  = filtered.filter(r => r.canal === 'Caisse').reduce((a, r) => a + r.montant, 0);
+  const ccTotal  = filtered.filter(r => r.canal === 'C&C' && !r.paieCaisse).reduce((a, r) => a + r.montant, 0);
+  const facTotal = facturesPeriode.reduce((a, f) => a + f.montant, 0);
+  const total = caTotal + ccTotal + facTotal;
+  const nb = filtered.length + facturesPeriode.length;
+
+  // Fusionner et trier par date desc
+  const allRows = [
+    ...filtered.map(r => ({ ...r, _type: 'standard' })),
+    ...facturesPeriode.map(f => ({ ...f, _type: 'facture', heure: '—', paiement: 'Virement' })),
+  ].sort((a, b) => (b.date + (b.heure||'')).localeCompare(a.date + (a.heure||'')));
+
+  const tableRows = allRows.map(r => {
+    const isFacture = r._type === 'facture';
+    const canalClass = isFacture ? 'canal-facture' : r.canal === 'Caisse' ? 'canal-caisse' : r.paieCaisse ? 'canal-both' : 'canal-cc';
+    const canalLabel = isFacture ? 'Facture pro' : r.canal === 'Caisse' ? 'Caisse' : r.paieCaisse ? 'C&C (payé caisse)' : 'C&C en ligne';
     const montantColor = r.paieCaisse ? 'var(--faint)' : 'var(--text)';
     const strikeStyle = r.paieCaisse ? 'text-decoration:line-through;' : '';
+    const dateLabel = isFacture
+      ? `${r.date.slice(8)}&nbsp;avr`
+      : `${r.date.slice(8)}&nbsp;avr&nbsp;—&nbsp;${r.heure}`;
+    const clientLabel = isFacture
+      ? `<strong>${r.client}</strong><br><span style="font-size:10px;color:var(--faint)">${r.id}</span>`
+      : r.client !== '—' ? `<strong>${r.client}</strong>` : '<span style="color:var(--faint)">—</span>';
     return `<tr>
-      <td style="white-space:nowrap">${r.date.slice(8)}&nbsp;avr&nbsp;—&nbsp;${r.heure}</td>
-      <td>${r.client !== '—' ? `<strong>${r.client}</strong>` : '<span style="color:var(--faint)">—</span>'}</td>
+      <td style="white-space:nowrap">${dateLabel}</td>
+      <td>${clientLabel}</td>
       <td><span class="canal-badge ${canalClass}">${canalLabel}</span></td>
       <td style="font-size:11px;color:var(--muted)">${r.detail}</td>
       <td style="font-weight:700;${strikeStyle}color:${montantColor};white-space:nowrap">${fmt(r.montant)}</td>
@@ -654,10 +687,10 @@ function renderHistorique() {
     </div>
 
     <div class="kpi-strip" style="margin-bottom:18px">
-      <div class="kpi-card"><div class="kpi-label">CA total</div><div class="kpi-val" style="font-size:1.5rem">${fmt(total)}</div><div class="kpi-sub">caisse + C&C en ligne</div></div>
+      <div class="kpi-card"><div class="kpi-label">CA total</div><div class="kpi-val" style="font-size:1.5rem">${fmt(total)}</div><div class="kpi-sub">caisse + C&C + factures</div></div>
       <div class="kpi-card"><div class="kpi-label">CA caisse</div><div class="kpi-val" style="font-size:1.5rem">${fmt(caTotal)}</div><div class="kpi-sub">dont règlements C&C</div></div>
       <div class="kpi-card green"><div class="kpi-label">CA C&C en ligne</div><div class="kpi-val" style="font-size:1.5rem">${fmt(ccTotal)}</div><div class="kpi-sub">paiements online</div></div>
-      <div class="kpi-card"><div class="kpi-label">Transactions</div><div class="kpi-val">${nb}</div><div class="kpi-sub">lignes comptables</div></div>
+      <div class="kpi-card"><div class="kpi-label">Factures pro</div><div class="kpi-val" style="font-size:1.5rem">${fmt(facTotal)}</div><div class="kpi-sub">${facturesPeriode.length} facture${facturesPeriode.length>1?'s':''} payée${facturesPeriode.length>1?'s':''}</div></div>
     </div>
 
     <div class="histo-filters">
@@ -724,6 +757,121 @@ function openExportModal() {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Exporter &amp; envoyer
       </button>
+    </div>`);
+}
+
+// ===== FACTURES =====
+function renderFactures() {
+  const el = document.getElementById('panel-factures');
+
+  const total       = facturesData.reduce((a, f) => a + f.montant, 0);
+  const nbAttente   = facturesData.filter(f => f.statut === 'en attente').length;
+  const nbRelancer  = facturesData.filter(f => f.statut === 'à relancer').length;
+  const nbPayees    = facturesData.filter(f => f.statut === 'payé').length;
+  const montantPayé = facturesData.filter(f => f.statut === 'payé').reduce((a, f) => a + f.montant, 0);
+
+  const STATUT_PILL  = { 'payé': 'pill-green', 'en attente': 'pill-gold', 'à relancer': 'pill-terra' };
+  const STATUT_LABEL = { 'payé': 'Payé', 'en attente': 'En attente', 'à relancer': 'À relancer' };
+
+  const fmtDateFR = d => d ? new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' }) : '—';
+
+  const sorted = [...facturesData].sort((a, b) => {
+    const order = { 'à relancer': 0, 'en attente': 1, 'payé': 2 };
+    return (order[a.statut] ?? 9) - (order[b.statut] ?? 9) || b.dateEnvoi.localeCompare(a.dateEnvoi);
+  });
+
+  const rows = sorted.map(f => {
+    const pillClass = STATUT_PILL[f.statut] || 'pill-gray';
+    const rowClass  = f.statut === 'à relancer' ? 'row-warn' : f.statut === 'payé' ? 'fac-row-paid' : '';
+    const actions = f.statut !== 'payé'
+      ? `<button class="btn btn-sm btn-secondary" style="margin-right:4px" onclick="relancerFacture('${f.id}')">Relancer</button>
+         <button class="btn btn-sm btn-green" onclick="marquerPayee('${f.id}')">Marquer payée</button>`
+      : `<span style="font-size:11px;color:var(--green)">✓ ${fmtDateFR(f.datePaiement)}</span>`;
+    return `<tr class="${rowClass}">
+      <td style="font-family:monospace;font-size:11px;color:var(--faint)">${f.id}</td>
+      <td><strong>${f.client}</strong><br><span style="font-size:11px;color:var(--muted)">${f.contact}</span></td>
+      <td style="font-size:11px;color:var(--muted);max-width:220px">${f.detail}</td>
+      <td style="font-weight:700;white-space:nowrap">${fmt(f.montant)}</td>
+      <td style="white-space:nowrap;color:var(--muted);font-size:12px">${fmtDateFR(f.dateEnvoi)}</td>
+      <td><span class="pill ${pillClass}">${STATUT_LABEL[f.statut]}</span></td>
+      <td style="white-space:nowrap">${actions}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="section-hd"><h2>Factures professionnelles</h2></div>
+
+    <div class="kpi-strip" style="margin-bottom:18px">
+      <div class="kpi-card"><div class="kpi-label">Total facturé</div><div class="kpi-val" style="font-size:1.4rem">${fmt(total)}</div><div class="kpi-sub">${facturesData.length} factures</div></div>
+      <div class="kpi-card green"><div class="kpi-label">Encaissé</div><div class="kpi-val" style="font-size:1.4rem">${fmt(montantPayé)}</div><div class="kpi-sub">${nbPayees} payée${nbPayees>1?'s':''}</div></div>
+      <div class="kpi-card"><div class="kpi-label">En attente</div><div class="kpi-val" style="color:var(--gold)">${nbAttente}</div><div class="kpi-sub">facture${nbAttente>1?'s':''}</div></div>
+      <div class="kpi-card terra"><div class="kpi-label">À relancer</div><div class="kpi-val" style="color:var(--terracotta)">${nbRelancer}</div><div class="kpi-sub">facture${nbRelancer>1?'s':''} urgente${nbRelancer>1?'s':''}</div></div>
+    </div>
+
+    ${nbRelancer > 0 ? `<div class="alert-banner" style="margin-bottom:16px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      ${nbRelancer} facture${nbRelancer>1?'s':''} sans réponse — pensez à relancer vos clients
+    </div>` : ''}
+
+    <div class="card" style="overflow-x:auto;padding:0">
+      <table class="tbl">
+        <thead>
+          <tr style="background:var(--cream)">
+            <th style="width:110px">N° Facture</th>
+            <th>Client</th>
+            <th>Détail</th>
+            <th style="white-space:nowrap">Montant TTC</th>
+            <th style="white-space:nowrap">Date d'envoi</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody style="font-size:12px">${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function relancerFacture(id) {
+  const f = facturesData.find(x => x.id === id);
+  if (!f) return;
+  f.statut = 'à relancer';
+  openModal(`
+    <div class="modal-hd"><h3>Relancer ${f.id}</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Destinataire</label><input type="text" value="${f.contact} — ${f.client}"></div>
+      <div class="form-row"><label>Message</label>
+        <textarea rows="5" style="resize:vertical">Bonjour ${f.contact},\n\nJe me permets de vous relancer concernant la facture ${f.id} d'un montant de ${fmt(f.montant)}, envoyée le ${new Date(f.dateEnvoi).toLocaleDateString('fr-FR')}.\n\nMerci de bien vouloir procéder au règlement.\n\nCordialement,\nMaison Nola</textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="alert('Email de relance envoyé ! (maquette)');closeModal();renderFactures()">Envoyer la relance</button>
+    </div>`);
+}
+
+function marquerPayee(id) {
+  const f = facturesData.find(x => x.id === id);
+  if (!f) return;
+  f.statut = 'payé';
+  f.datePaiement = new Date().toISOString().slice(0, 10);
+  renderFactures();
+}
+
+function openNewFactureModal() {
+  openModal(`
+    <div class="modal-hd"><h3>Nouvelle facture</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Client</label><input type="text" placeholder="Restaurant Le Terroir"></div>
+      <div class="form-row"><label>Contact</label><input type="text" placeholder="Nom du responsable"></div>
+      <div class="grid2">
+        <div class="form-row"><label>Montant TTC (€)</label><input type="number" min="0" step="0.01" placeholder="0,00"></div>
+        <div class="form-row"><label>Date d'envoi</label><input type="date" value="2026-04-25"></div>
+      </div>
+      <div class="form-row"><label>Détail commande</label><input type="text" placeholder="Ex: Table 6/8 pers ×2 (Mixte)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="alert('Facture créée et envoyée ! (maquette)');closeModal()">Créer &amp; envoyer</button>
     </div>`);
 }
 

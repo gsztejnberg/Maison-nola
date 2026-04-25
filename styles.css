@@ -266,6 +266,10 @@ a { text-decoration: none; color: inherit; }
 .canal-caisse { background: var(--warm); color: var(--brown); }
 .canal-cc { background: #EBF4FB; color: #2874A6; }
 .canal-both { background: #FDF6E3; color: var(--gold); }
+.canal-facture { background: #F0EBF8; color: #6B3FA0; }
+
+/* ===== FACTURES ===== */
+.fac-row-paid td { opacity: .6; }
 
 /* ===== MODAL ===== */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 700; display: flex; align-items: flex-end; justify-content: center; }
